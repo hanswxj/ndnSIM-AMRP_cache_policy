@@ -59,7 +59,7 @@ StackHelper::StackHelper()
   m_csPolicies.insert({"nfd::cs::lru", [] { return make_unique<nfd::cs::LruPolicy>(); }});
   m_csPolicies.insert({"nfd::cs::priority_fifo", [] () { return make_unique<nfd::cs::PriorityFifoPolicy>(); }});
   m_csPolicies.insert({"nfd::cs::lrfu", [] () { return make_unique<nfd::cs::PriorityLrfuPolicy>(); }});
-  m_csPolicies.insert({"nfd::cs::lirs", [] () { return make_unique<nfd::cs::LirsPolicy>(); }});     //add
+  m_csPolicies.insert({"nfd::cs::lirs", [] () { return make_unique<nfd::cs::LirsPolicy>(); }});        //wxj add
 
   m_csPolicyCreationFunc = m_csPolicies["nfd::cs::lru"];
 
