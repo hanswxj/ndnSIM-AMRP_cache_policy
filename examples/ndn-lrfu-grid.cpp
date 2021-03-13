@@ -159,15 +159,15 @@ main(int argc, char* argv[])
 
   // Install NDN stack on producer and consumer
   ndn::StackHelper ndnHelper;
-  ndnHelper.setCsSize(50);
-  ndnHelper.setPolicy("nfd::cs::lrfu");      //lrfu 
+  ndnHelper.setCsSize(40);
+  ndnHelper.setPolicy("nfd::cs::lirs");   
   ndnHelper.Install(producerNodes);
   ndnHelper.Install(consumerNodes);
 
   // Install NDN stack on router
   ndn::StackHelper ndnRouterHelper;
-  ndnRouterHelper.setCsSize(50);
-  ndnRouterHelper.setPolicy("nfd::cs::lrfu");     //lrfu
+  ndnRouterHelper.setCsSize(40);
+  ndnRouterHelper.setPolicy("nfd::cs::lirs");
   ndnRouterHelper.Install(routerNodes);
 
   // Installing global routing interface on all nodes
@@ -188,8 +188,8 @@ main(int argc, char* argv[])
   consumerHelper.SetPrefix(prefix);
   consumerHelper.SetAttribute("Frequency", StringValue("100"));        // 100 interests a second
   consumerHelper.SetAttribute("NumberOfContents", StringValue("500")); // 1000 different contents
-  consumerHelper.SetAttribute("q",StringValue("1.2"));
-  consumerHelper.SetAttribute("s",StringValue("1.2"));
+  consumerHelper.SetAttribute("q",StringValue("0.8"));
+  consumerHelper.SetAttribute("s",StringValue("0.8"));
 
   for (int i = 0; i <= 6; i++){
     consumerHelper.Install(consumerNodes.Get(i));

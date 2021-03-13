@@ -52,7 +52,7 @@ main(int argc, char* argv[])
   ndn::StackHelper ndnHelper;
   ndnHelper.SetDefaultRoutes(true);
   ndnHelper.setCsSize(10);
-  ndnHelper.setPolicy("nfd::cs::lirs");
+  ndnHelper.setPolicy("nfd::cs::dlirs");
   ndnHelper.InstallAll();
 
   // Choosing forwarding strategy

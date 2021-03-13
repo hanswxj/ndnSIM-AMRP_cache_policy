@@ -14,7 +14,7 @@ namespace dlirs {
 
 #define NODEBUG
 #define LRUStackSLocation int
-#define LRUStackLocation  int
+#define LRUStackLocation  size_t
 #define LRUListQLocation  int
 #define InvalidLocation -1
 #define BottomLocation 0
@@ -117,8 +117,25 @@ public:
 		container_.erase(container_.begin());
   }
 
+  void eraseTopEntry(){
+		container_.erase(container_.end() - 1);
+  }
+
   void eraseEntryByLocation(LRUStackLocation location){
     container_.erase(container_.begin() + location);
+  }
+
+  int erase_K_nHIR(int k){
+    int r = 0;
+    for(auto it = container_.begin(); it != container_.end(); ){
+      if(it->first->getState()== EntryInfo::knonResidentHIR){
+        r++;
+        it = container_.erase(it);
+      }
+      else it++;      
+      if(r == k) return k;
+    }
+    return r;
   }
 
   void setTopState(EntryInfo::EntryState state){
@@ -167,6 +184,8 @@ public:
 
 private:
   typedef std::vector<EntryPair> EntryVec;
+
+public:
   EntryVec container_;
     
   int getContainerSize(){
@@ -186,12 +205,12 @@ public:
       assert(state != EntryInfo::kInvalid);
       if(state == EntryInfo::kresidentHIR)
       {
-        delnhir ++;
         eraseBottomEntry();
       }
       else if(state == EntryInfo::knonResidentHIR)
       {
-				eraseBottomEntry();
+				delnhir ++;
+        eraseBottomEntry();
       }        
       else
 				break;
@@ -199,11 +218,21 @@ public:
     return delnhir;
   }
 
-  void findAndSetState(const Name &name, EntryInfo::EntryState state)
+  bool findAndSetState(const Name &name, EntryInfo::EntryState state)
   {
     LRUStackSLocation location = find(name);
-    if(location != InvalidLocation)
+    if(location != InvalidLocation){
       setStateByLocation(location , state);
+      return true;
+    }
+    return false;
+  }
+  
+  void findAndRemove(const Name &name) 
+  {
+		LRUStackSLocation location = find(name);
+		if(location != InvalidLocation)
+			eraseEntryByLocation(location);
   }
 };
 
@@ -230,6 +259,13 @@ public:
   }
 
   EntryPair getAndRemoveFrontEntry()
+  {
+    EntryPair tmp = getTopEntry();
+    eraseTopEntry();
+    return tmp;
+  }
+
+  EntryPair getAndRemoveBottomEntry()
   {
     EntryPair tmp = getBottomEntry();
     eraseBottomEntry();
@@ -268,6 +304,12 @@ private:
 	void addAResidentHIREntry(iterator i);
 
   void adjustSize(bool hitHIR );
+
+  void changeHIRtoLIR(int k);
+
+  void changeLIRtoHIR(int k);
+
+  void removeNHIR(int k);
 
 private:
 	int cacheSize;

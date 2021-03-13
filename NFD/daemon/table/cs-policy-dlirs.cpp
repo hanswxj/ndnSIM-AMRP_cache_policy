@@ -23,24 +23,26 @@ void
 DlirsPolicy::setLimit(size_t nMaxEntries){
 	Policy::setLimit(nMaxEntries);
 	cacheSize = nMaxEntries;
-	lirSize_ = (int)nMaxEntries * 0.9;
-	hirSize_ = cacheSize - lirSize_;
+	hirSize_ = 1 + (int)(nMaxEntries / 100);
+	lirSize_ = cacheSize - hirSize_;
+	NFD_LOG_INFO("HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
 }
 
 void
 DlirsPolicy::doAfterInsert(iterator i)
 {
 	NFD_LOG_INFO("After Insert Function" );
+	NFD_LOG_INFO("HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+	NFD_LOG_INFO("Cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nhir is "<<curnhir);
 
+	
 	if (curlir < lirSize_) {
 		NFD_LOG_INFO("LIR is not full, insert to LIR, and lirsize is "<< lirSize_<<" after the insertion");
 		stackS_.pushEntry({std::make_shared<EntryInfo>(i->getName(), EntryInfo::kLIR), i});
 		curlir ++;
 		
 		stackS_.debugToString("LRU stack S");
-        //std::cout << "\n";
         listQ_.debugToString("LRU list Q");
-        //std::cout << "\n";
 	}
 	else if (curhir < hirSize_)
 	{
@@ -49,23 +51,27 @@ DlirsPolicy::doAfterInsert(iterator i)
 		curhir ++;
 
 		stackS_.debugToString("LRU stack S");
-        //std::cout << "\n";
         listQ_.debugToString("LRU list Q");
-        //std::cout << "\n";
 	}
 	else{
-		NFD_LOG_INFO("ResidentHIR and LIR are full, remove a ResidentHIR" );
-		EntryPair tmp = listQ_.getAndRemoveFrontEntry();
-		stackS_.findAndSetState(tmp.first->getName(), EntryInfo::knonResidentHIR);  //if find will set
-		curnhir ++;
+		removeNHIR(curhir + curlir + curnhir - 2*cacheSize);
+		NFD_LOG_INFO("ResidentHIR and LIR are full, remove a ResidentHIR" );		
+		if(listQ_.container_[BottomLocation].first->get_isDemoted()) {
+			listQ_.container_[BottomLocation].first->set_isDemoted(false);
+			hir_lir --;
+		}
+		EntryPair tmp = listQ_.getAndRemoveBottomEntry();		
+
+		bool is_set = stackS_.findAndSetState(tmp.first->getName(), EntryInfo::knonResidentHIR);  //if find will set
+		if(is_set) curnhir ++;
 
 		LRUStackSLocation location = stackS_.find(i->getName());
 		if (location >= 0) {
 			NFD_LOG_INFO("This entry is a nonResidentHIR, it's in stack S" );
 			hitHIRInStackS(location, i);
 			adjustSize(true);
-			hir_lir ++;
-
+			curnhir--;
+			changeLIRtoHIR(curlir - lirSize_);		
 		}
 		else {
 			NFD_LOG_INFO("This new entry is not in both cache and stack S, save it to cache" );
@@ -73,19 +79,20 @@ DlirsPolicy::doAfterInsert(iterator i)
 		} 
 
 		stackS_.debugToString("LRU stack S");
-        //std::cout << "\n";
         listQ_.debugToString("LRU list Q");
-        //std::cout << "\n";
 
 		this->emitSignal(beforeEvict, tmp.second);
 	}
-	NFD_LOG_INFO("HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+	NFD_LOG_INFO("After doAfterInsert, HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+	NFD_LOG_INFO("After doAfterInsert, cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nhir is "<<curnhir);
 }
 
 void
 DlirsPolicy::doAfterRefresh(iterator i)
 {
 	NFD_LOG_INFO("After Refresh Function" );
+	NFD_LOG_INFO("HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+	NFD_LOG_INFO("Cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nhir is "<<curnhir);
 
 	LRUStackSLocation location = stackS_.find(i->getName());    //在stackS中找这个条目的位置
 	if(location >= 0)    //在stackS中找到了
@@ -99,21 +106,16 @@ DlirsPolicy::doAfterRefresh(iterator i)
 			curnhir -= a;
 			
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 		else
 		{
 			NFD_LOG_INFO("This entry is a ResidentHIR in Stack S");
 			hitHIRInStackS(location, i);
 			listQ_.findAndRemove(i->getName());
-			curhir --, curlir ++;
-
+			
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 	}
 	else
@@ -124,19 +126,22 @@ DlirsPolicy::doAfterRefresh(iterator i)
 		if (location >= 0) {
 			if(flag){
 				adjustSize(false);
+				listQ_.set_isDemotedByLocation(location, false);
+				hir_lir --;
 			}
 			stackS_.pushEntry(listQ_.getEntryByLocation(location));
 			listQ_.movToEnd(location, i);
 
+			changeHIRtoLIR(lirSize_ - curlir);
+
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 		else
 			NFD_LOG_INFO("hit but there is not such a man in LRU S stack");
 	}
-	NFD_LOG_INFO("HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+	NFD_LOG_INFO("After doAfterRefresh, HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+	NFD_LOG_INFO("After doAfterRefresh, cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nhir is "<<curnhir);
 	// hitTimes_++;
 }
 
@@ -150,6 +155,8 @@ void
 DlirsPolicy::doBeforeUse(iterator i)
 {
 	NFD_LOG_INFO("Before Use Function" );
+	NFD_LOG_INFO("HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+	NFD_LOG_INFO("Cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nhir is "<<curnhir);
 
 	LRUStackSLocation location = stackS_.find(i->getName());    //在stackS中找这个条目的位置
 	if(location >= 0)    //在stackS中找到了
@@ -163,9 +170,7 @@ DlirsPolicy::doBeforeUse(iterator i)
 			curnhir -= a;
 
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 		else
 		{
@@ -174,9 +179,7 @@ DlirsPolicy::doBeforeUse(iterator i)
 			listQ_.findAndRemove(i->getName());
 
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 	}
 	else
@@ -187,24 +190,30 @@ DlirsPolicy::doBeforeUse(iterator i)
 		if (location >= 0) {
 			if(flag){
 				adjustSize(false);
+				listQ_.set_isDemotedByLocation(location, false);
+				//hir_lir --;
 			}
 			stackS_.pushEntry(listQ_.getEntryByLocation(location));
 			listQ_.movToEnd(location, i);
 
+			changeHIRtoLIR(lirSize_ - curlir);
+
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 		else
 			NFD_LOG_INFO("hit but there is not such a man in LRU S stack");
 	}
-	NFD_LOG_INFO("HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+	NFD_LOG_INFO("After doBeforeUse, HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+	NFD_LOG_INFO("After doBeforeUse, cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nhir is "<<curnhir);
 	// hitTimes_++;
 }
 
 void 
-DlirsPolicy::evictEntries() {}
+DlirsPolicy::evictEntries() 
+{
+	
+}
 
 void 
 DlirsPolicy::hitHIRInStackS(LRUStackSLocation location, iterator i)
@@ -213,6 +222,7 @@ DlirsPolicy::hitHIRInStackS(LRUStackSLocation location, iterator i)
 	stackS_.setTopState(EntryInfo::kLIR);
 	stackS_.setBottomState(EntryInfo::kresidentHIR);
 	stackS_.set_isDemotedByLocation(BottomLocation, true);
+	hir_lir ++;
 	listQ_.pushToEnd(stackS_.getBottomEntry());
 	int a = stackS_.stackPruning();
 	curnhir -= a;
@@ -228,12 +238,14 @@ DlirsPolicy::addAResidentHIREntry(iterator i)
 
 void DlirsPolicy::adjustSize(bool hitHIR)
 {
+	NFD_LOG_INFO("Adjust Size Function" );
+	NFD_LOG_INFO("HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
 	int delta = 0;
 	if (hitHIR) {
 		if (curnhir > hir_lir) {
 			delta = 1;
 		} else {
-			delta = (int)((double)hir_lir / (double)curnhir + 0.5);
+			delta = (int)((double)hir_lir / (double)curnhir + 0.5);;
 		}
 	} else {
 		if (hir_lir > curnhir) {
@@ -246,10 +258,62 @@ void DlirsPolicy::adjustSize(bool hitHIR)
 	if (hirSize_ < 1) {
 		hirSize_ = 1;
 	}
-	if (hirSize_ > cacheSize - 1) {
-		hirSize_ = cacheSize - 1;
+	if (hirSize_ > (int)(cacheSize * 0.2)) {
+		hirSize_ = (int)(cacheSize * 0.2);
 	}
 	lirSize_ = cacheSize - hirSize_;
+	NFD_LOG_INFO("After adjustSize, HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
+}
+
+void 
+DlirsPolicy::changeHIRtoLIR(int k) 
+{
+	NFD_LOG_INFO("Change HIR to LIR Function" );
+	NFD_LOG_INFO("Cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nonHIR size is "<<curnhir);	
+	if(k <= 0) return;
+	while(k-- > 0) {
+		EntryPair HIRentry = listQ_.getAndRemoveFrontEntry();
+		bool is_set =stackS_.findAndSetState(HIRentry.first->getName(), EntryInfo::kLIR);
+		if(!is_set) {
+			HIRentry.first->setState(EntryInfo::kLIR);
+			stackS_.pushEntry(HIRentry);
+		}
+		curhir --, curlir ++;
+	}
+	NFD_LOG_INFO("After change HIR to LIR, HIR size is "<<hirSize_<<", LIR size is "<<lirSize_);
+	NFD_LOG_INFO("After change HIR to LIR, cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nonHIR size is "<<curnhir);
+	BOOST_ASSERT((curhir == hirSize_) && (curlir == lirSize_));
+}
+
+void 
+DlirsPolicy::changeLIRtoHIR(int k) 
+{
+	NFD_LOG_INFO("Change LIR to HIR Function" );
+	NFD_LOG_INFO("Cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nonHIR size is "<<curnhir);	
+	if(k <= 0) return;
+	while(k-- > 0) {
+		stackS_.setBottomState(EntryInfo::kresidentHIR);
+		stackS_.set_isDemotedByLocation(BottomLocation, true);
+		listQ_.pushToEnd(stackS_.getBottomEntry());
+		int a = stackS_.stackPruning();
+		curnhir -= a;
+		curlir--, curhir++;
+		hir_lir++;
+	}
+	NFD_LOG_INFO("After change LIR to HIR, cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nonHIR size is "<<curnhir);
+	BOOST_ASSERT((curhir == hirSize_) && (curlir == lirSize_));
+}
+
+void 
+DlirsPolicy::removeNHIR(int k) 
+{
+	NFD_LOG_INFO("Remove k nonHIR Function" );
+	NFD_LOG_INFO("Cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nonHIR size is "<<curnhir);
+	if(k <= 0) return;
+	int a = stackS_.erase_K_nHIR(k);
+	curnhir -= a;
+	NFD_LOG_INFO("After remove NHIR, cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nonHIR size is "<<curnhir);
+	BOOST_ASSERT(curhir + curlir + curnhir == 2*cacheSize);
 }
 
 void 
@@ -257,17 +321,12 @@ LRUStack::debugToString(std::string const& name)
   {
     NFD_LOG_INFO(" " );
 	NFD_LOG_INFO("#############" << name << "#############" );
-    //std::cout << "#############" << name << "#############\n";
     std::for_each( container_.begin(), container_.end(), [](EntryPair& item)
       { 
         NFD_LOG_INFO("<" << item.first->getName().toUri() << " , " <<
         item.first->returnStateStr(item.first->getState()) << ">");
-        //std::cout << "<" << item.first->getName().toUri() << " , " <<
-        //item.first->returnStateStr( item.first->getState() ) << ">\n";
         } );
-    //NFD_LOG_INFO("#############" << name << "#############" );
-	NFD_LOG_INFO(" " );
-    //std::cout << "#############" << name << "#############\n";
+    NFD_LOG_INFO(" " );
   }
 
 } // namespace lru

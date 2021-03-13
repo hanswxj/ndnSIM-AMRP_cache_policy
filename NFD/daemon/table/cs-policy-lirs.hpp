@@ -32,7 +32,7 @@ namespace lirs {
 
 #define NODEBUG
 #define LRUStackSLocation int
-#define LRUStackLocation  int
+#define LRUStackLocation  size_t
 #define LRUListQLocation  int
 #define InvalidLocation -1
 #define BottomLocation 0
@@ -167,6 +167,8 @@ public:
 
 private:
   typedef std::vector<EntryPair> EntryVec;
+
+public:  
   EntryVec container_;
     
   int getContainerSize(){
@@ -261,6 +263,7 @@ private:
 private:
 	int lirSize_;
 	int hirSize_;
+  int cacheSize;
 	LRUStackS stackS_;
 	LRUListQ listQ_;
 };

@@ -14,14 +14,16 @@ NFD_REGISTER_CS_POLICY(LirsPolicy);
 LirsPolicy::LirsPolicy()
   : Policy(POLICY_NAME),
   lirSize_(9),
-  hirSize_(1)   
+  hirSize_(1),
+  cacheSize(10)   
 {}
 
 void
 LirsPolicy::setLimit(size_t nMaxEntries){
 	Policy::setLimit(nMaxEntries);
-	lirSize_ = nMaxEntries * 0.9;
-	hirSize_ = nMaxEntries - lirSize_;
+	hirSize_ = 1+ (int)(nMaxEntries / 100);
+	lirSize_ = nMaxEntries - hirSize_;
+	cacheSize = (int)nMaxEntries;
 }
 
 void
@@ -34,9 +36,7 @@ LirsPolicy::doAfterInsert(iterator i)
 		stackS_.pushEntry({std::make_shared<EntryInfo>(i->getName(), EntryInfo::kLIR), i});
 		
 		stackS_.debugToString("LRU stack S");
-        //std::cout << "\n";
         listQ_.debugToString("LRU list Q");
-        //std::cout << "\n";
 	}
 	else if ((hirSize_ --) > 0)
 	{
@@ -44,11 +44,17 @@ LirsPolicy::doAfterInsert(iterator i)
 		addAResidentHIREntry(i);
 
 		stackS_.debugToString("LRU stack S");
-        //std::cout << "\n";
         listQ_.debugToString("LRU list Q");
-        //std::cout << "\n";
 	}
-	else{
+	else{		
+		for(auto it = stackS_.container_.begin(); it != stackS_.container_.end(); ) {
+			if(stackS_.getSize() <= 2 * cacheSize) break;
+			if(it->first->getState()== EntryInfo::knonResidentHIR){
+				it = stackS_.container_.erase(it);
+			}
+			else it ++;
+		}
+
 		NFD_LOG_INFO("ResidentHIR and LIR are full, remove a ResidentHIR" );
 		EntryPair tmp = listQ_.getAndRemoveFrontEntry();
 		stackS_.findAndSetState(tmp.first->getName(), EntryInfo::knonResidentHIR); //if find will set
@@ -64,9 +70,7 @@ LirsPolicy::doAfterInsert(iterator i)
 		} 
 
 		stackS_.debugToString("LRU stack S");
-        //std::cout << "\n";
         listQ_.debugToString("LRU list Q");
-        //std::cout << "\n";
 
 		this->emitSignal(beforeEvict, tmp.second);
 	}
@@ -88,9 +92,7 @@ LirsPolicy::doAfterRefresh(iterator i)
 			stackS_.stackPruning();
 			
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 		else
 		{
@@ -99,9 +101,7 @@ LirsPolicy::doAfterRefresh(iterator i)
 			listQ_.findAndRemove(i->getName());
 
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 	}
 	else
@@ -113,9 +113,7 @@ LirsPolicy::doAfterRefresh(iterator i)
 			listQ_.movToEnd(location, i);
 
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 		else
 			NFD_LOG_INFO("hit but there is not such a man in LRU S stack");
@@ -146,9 +144,7 @@ LirsPolicy::doBeforeUse(iterator i)
 			stackS_.stackPruning();
 
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 		else
 		{
@@ -157,9 +153,7 @@ LirsPolicy::doBeforeUse(iterator i)
 			listQ_.findAndRemove(i->getName());
 
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 	}
 	else
@@ -171,9 +165,7 @@ LirsPolicy::doBeforeUse(iterator i)
 			listQ_.movToEnd(location, i);
 
 			stackS_.debugToString("LRU stack S");
-            //std::cout << "\n";
             listQ_.debugToString("LRU list Q");
-            //std::cout << "\n";
 		}
 		else
 			NFD_LOG_INFO("hit but there is not such a man in LRU S stack");
@@ -208,17 +200,12 @@ LRUStack::debugToString(std::string const& name)
   {
     NFD_LOG_INFO(" " );
 	NFD_LOG_INFO("#############" << name << "#############" );
-    //std::cout << "#############" << name << "#############\n";
     std::for_each( container_.begin(), container_.end(), [](EntryPair& item)
       { 
         NFD_LOG_INFO("<" << item.first->getName().toUri() << " , " <<
         item.first->returnStateStr(item.first->getState()) << ">");
-        //std::cout << "<" << item.first->getName().toUri() << " , " <<
-        //item.first->returnStateStr( item.first->getState() ) << ">\n";
         } );
-    //NFD_LOG_INFO("#############" << name << "#############" );
 	NFD_LOG_INFO(" " );
-    //std::cout << "#############" << name << "#############\n";
   }
 
 } // namespace lru
