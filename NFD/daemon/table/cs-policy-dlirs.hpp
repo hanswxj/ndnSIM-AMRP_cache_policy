@@ -309,6 +309,8 @@ private:
 
   void changeLIRtoHIR(int k);
 
+  void removeHIR(int k);
+
   void removeNHIR(int k);
 
 private:

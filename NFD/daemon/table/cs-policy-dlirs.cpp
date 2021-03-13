@@ -127,7 +127,6 @@ DlirsPolicy::doAfterRefresh(iterator i)
 			if(flag){
 				adjustSize(false);
 				listQ_.set_isDemotedByLocation(location, false);
-				hir_lir --;
 			}
 			stackS_.pushEntry(listQ_.getEntryByLocation(location));
 			listQ_.movToEnd(location, i);
@@ -191,12 +190,13 @@ DlirsPolicy::doBeforeUse(iterator i)
 			if(flag){
 				adjustSize(false);
 				listQ_.set_isDemotedByLocation(location, false);
-				//hir_lir --;
+
 			}
 			stackS_.pushEntry(listQ_.getEntryByLocation(location));
 			listQ_.movToEnd(location, i);
 
-			changeHIRtoLIR(lirSize_ - curlir);
+			removeHIR(curhir - hirSize_);
+			// changeHIRtoLIR(lirSize_ - curlir);
 
 			stackS_.debugToString("LRU stack S");
             listQ_.debugToString("LRU list Q");
@@ -258,8 +258,8 @@ void DlirsPolicy::adjustSize(bool hitHIR)
 	if (hirSize_ < 1) {
 		hirSize_ = 1;
 	}
-	if (hirSize_ > (int)(cacheSize * 0.2)) {
-		hirSize_ = (int)(cacheSize * 0.2);
+	if (hirSize_ > (int)(cacheSize * 0.25)) {
+		hirSize_ = (int)(cacheSize * 0.25);
 	}
 	lirSize_ = cacheSize - hirSize_;
 	NFD_LOG_INFO("After adjustSize, HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
@@ -302,6 +302,19 @@ DlirsPolicy::changeLIRtoHIR(int k)
 	}
 	NFD_LOG_INFO("After change LIR to HIR, cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nonHIR size is "<<curnhir);
 	BOOST_ASSERT((curhir == hirSize_) && (curlir == lirSize_));
+}
+
+void 
+DlirsPolicy::removeHIR(int k) 
+{
+	if(k < 0) return;
+	while(k-- > 0) {
+		EntryPair HIRentry = listQ_.getAndRemoveBottomEntry();;
+		bool is_set = stackS_.findAndSetState(HIRentry.first->getName(),EntryInfo::kresidentHIR);
+		curhir --;
+		this->emitSignal(beforeEvict, HIRentry.second);
+	}
+	BOOST_ASSERT(curhir == hirSize_);
 }
 
 void 
