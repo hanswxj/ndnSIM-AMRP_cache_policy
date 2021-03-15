@@ -56,16 +56,18 @@ DlirsPolicy::doAfterInsert(iterator i)
 	else{
 		removeNHIR(curhir + curlir + curnhir - 2*cacheSize);
 		NFD_LOG_INFO("ResidentHIR and LIR are full, remove a ResidentHIR" );		
-		if(listQ_.container_[BottomLocation].first->get_isDemoted()) {
-			listQ_.container_[BottomLocation].first->set_isDemoted(false);
-			hir_lir --;
+				
+		bool is_Demoted = listQ_.get_isDemotedByLocation(BottomLocation);
+		EntryPair tmp = listQ_.getAndRemoveBottomEntry();
+		LRUStackSLocation location = stackS_.find(tmp.first->getName());
+		if(location != InvalidLocation) {
+			stackS_.setStateByLocation(location, EntryInfo::knonResidentHIR);
+			curnhir ++;
+			stackS_.set_isDemotedByLocation(location, false);
 		}
-		EntryPair tmp = listQ_.getAndRemoveBottomEntry();		
+		if(is_Demoted) hir_lir --;		
 
-		bool is_set = stackS_.findAndSetState(tmp.first->getName(), EntryInfo::knonResidentHIR);  //if find will set
-		if(is_set) curnhir ++;
-
-		LRUStackSLocation location = stackS_.find(i->getName());
+		location = stackS_.find(i->getName());
 		if (location >= 0) {
 			NFD_LOG_INFO("This entry is a nonResidentHIR, it's in stack S" );
 			hitHIRInStackS(location, i);
@@ -131,6 +133,7 @@ DlirsPolicy::doAfterRefresh(iterator i)
 			stackS_.pushEntry(listQ_.getEntryByLocation(location));
 			listQ_.movToEnd(location, i);
 
+			// removeHIR(curhir - hirSize_);
 			changeHIRtoLIR(lirSize_ - curlir);
 
 			stackS_.debugToString("LRU stack S");
@@ -190,7 +193,6 @@ DlirsPolicy::doBeforeUse(iterator i)
 			if(flag){
 				adjustSize(false);
 				listQ_.set_isDemotedByLocation(location, false);
-
 			}
 			stackS_.pushEntry(listQ_.getEntryByLocation(location));
 			listQ_.movToEnd(location, i);
@@ -220,6 +222,11 @@ DlirsPolicy::hitHIRInStackS(LRUStackSLocation location, iterator i)
 {
 	stackS_.movToTop(location, i);
 	stackS_.setTopState(EntryInfo::kLIR);
+	bool flag = stackS_.getTopEntry().first->get_isDemoted();
+	if(flag) {
+		stackS_.set_isDemotedByLocation(stackS_.getContainerSize() - 1, false);
+		hir_lir --;
+	}
 	stackS_.setBottomState(EntryInfo::kresidentHIR);
 	stackS_.set_isDemotedByLocation(BottomLocation, true);
 	hir_lir ++;
@@ -258,7 +265,7 @@ void DlirsPolicy::adjustSize(bool hitHIR)
 	if (hirSize_ < 1) {
 		hirSize_ = 1;
 	}
-	if (hirSize_ > (int)(cacheSize * 0.25)) {
+	if (hirSize_ > (int)(cacheSize * 0.25)) {   //(int)(cacheSize * 0.25), cacheSize - 1
 		hirSize_ = (int)(cacheSize * 0.25);
 	}
 	lirSize_ = cacheSize - hirSize_;
@@ -273,12 +280,19 @@ DlirsPolicy::changeHIRtoLIR(int k)
 	if(k <= 0) return;
 	while(k-- > 0) {
 		EntryPair HIRentry = listQ_.getAndRemoveFrontEntry();
-		bool is_set =stackS_.findAndSetState(HIRentry.first->getName(), EntryInfo::kLIR);
-		if(!is_set) {
+		bool flag = HIRentry.first->get_isDemoted();
+		LRUStackSLocation location = stackS_.find(HIRentry.first->getName());
+		if(location != InvalidLocation) {
+			stackS_.setStateByLocation(location, EntryInfo::kLIR);
+			stackS_.set_isDemotedByLocation(location, false);
+		}
+		else {
 			HIRentry.first->setState(EntryInfo::kLIR);
+			HIRentry.first->set_isDemoted(false);
 			stackS_.pushEntry(HIRentry);
 		}
 		curhir --, curlir ++;
+		if(flag) hir_lir --;
 	}
 	NFD_LOG_INFO("After change HIR to LIR, HIR size is "<<hirSize_<<", LIR size is "<<lirSize_);
 	NFD_LOG_INFO("After change HIR to LIR, cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nonHIR size is "<<curnhir);
@@ -309,9 +323,16 @@ DlirsPolicy::removeHIR(int k)
 {
 	if(k < 0) return;
 	while(k-- > 0) {
-		EntryPair HIRentry = listQ_.getAndRemoveBottomEntry();;
-		bool is_set = stackS_.findAndSetState(HIRentry.first->getName(),EntryInfo::kresidentHIR);
+		bool is_Demoted = listQ_.get_isDemotedByLocation(BottomLocation);
+		EntryPair HIRentry = listQ_.getAndRemoveBottomEntry();
+		LRUStackSLocation location = stackS_.find(HIRentry.first->getName());
+		if(location != InvalidLocation) {
+			stackS_.setStateByLocation(location, EntryInfo::knonResidentHIR);
+			curnhir ++;
+			stackS_.set_isDemotedByLocation(location, false);
+		} 
 		curhir --;
+		if(is_Demoted) hir_lir --;
 		this->emitSignal(beforeEvict, HIRentry.second);
 	}
 	BOOST_ASSERT(curhir == hirSize_);

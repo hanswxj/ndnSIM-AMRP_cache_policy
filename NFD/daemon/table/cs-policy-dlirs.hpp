@@ -178,7 +178,7 @@ public:
     return container_[location];
   }
 
-  int getSize(){
+  int getContainerSize(){
 		return container_.size();
   }
 
@@ -186,11 +186,8 @@ private:
   typedef std::vector<EntryPair> EntryVec;
 
 public:
-  EntryVec container_;
-    
-  int getContainerSize(){
-		return container_.size();
-  }
+  EntryVec container_;    
+  
 };
 
 class LRUStackS:public LRUStack

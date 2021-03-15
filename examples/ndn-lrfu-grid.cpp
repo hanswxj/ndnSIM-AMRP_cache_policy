@@ -160,14 +160,14 @@ main(int argc, char* argv[])
   // Install NDN stack on producer and consumer
   ndn::StackHelper ndnHelper;
   ndnHelper.setCsSize(40);
-  ndnHelper.setPolicy("nfd::cs::lirs");   
+  ndnHelper.setPolicy("nfd::cs::dlirs");   
   ndnHelper.Install(producerNodes);
   ndnHelper.Install(consumerNodes);
 
   // Install NDN stack on router
   ndn::StackHelper ndnRouterHelper;
   ndnRouterHelper.setCsSize(40);
-  ndnRouterHelper.setPolicy("nfd::cs::lirs");
+  ndnRouterHelper.setPolicy("nfd::cs::dlirs");
   ndnRouterHelper.Install(routerNodes);
 
   // Installing global routing interface on all nodes
