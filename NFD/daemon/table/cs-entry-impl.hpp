@@ -27,6 +27,7 @@
 #define NFD_DAEMON_TABLE_CS_ENTRY_IMPL_HPP
 
 #include "cs-entry.hpp"
+#include "cs-internal.hpp"
 
 namespace nfd {
 namespace cs {
@@ -65,6 +66,11 @@ private:
 private:
   Name m_queryName;
 };
+
+inline bool operator<(Table::const_iterator lhs, Table::const_iterator rhs)
+{
+  return *lhs < *rhs;
+}
 
 } // namespace cs
 } // namespace nfd

@@ -155,7 +155,7 @@ Cs::find(const Interest& interest,
   }
 
   if (match == last) {
-    if (m_policy->getName() == "lirs" || m_policy->getName() == "lrfu" || m_policy->getName() == "lru" || m_policy->getName() == "priority_fifo" || m_policy->getName() == "dlirs"){
+    if (m_policy->getName() == "lirs" || m_policy->getName() == "lrfu" || m_policy->getName() == "lru" || m_policy->getName() == "priority_fifo" || m_policy->getName() == "dlirs"  || m_policy->getName() == "ccp" || m_policy->getName() == "ccpcc"){
         std::string prefdata = prefix.toUri().c_str();
 
         std::string delimiter = "%";
@@ -185,7 +185,7 @@ Cs::find(const Interest& interest,
   }
   
   hitRateRatio ++;
-  if (m_policy->getName() == "lirs" || m_policy->getName() == "lrfu" || m_policy->getName() == "lru" || m_policy->getName() == "priority_fifo" || m_policy->getName() == "dlirs"){
+  if (m_policy->getName() == "lirs" || m_policy->getName() == "lrfu" || m_policy->getName() == "lru" || m_policy->getName() == "priority_fifo" || m_policy->getName() == "dlirs" || m_policy->getName() == "ccp" || m_policy->getName() == "ccpcc"){
       std::string prefdata = prefix.toUri().c_str();
 
       std::string delimiter = "%";

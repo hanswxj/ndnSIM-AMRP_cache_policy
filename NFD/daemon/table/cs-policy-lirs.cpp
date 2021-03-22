@@ -21,7 +21,7 @@ LirsPolicy::LirsPolicy()
 void
 LirsPolicy::setLimit(size_t nMaxEntries){
 	Policy::setLimit(nMaxEntries);
-	hirSize_ = 1+ (int)(nMaxEntries / 100);
+	hirSize_ = 1+ (int)(nMaxEntries / 10);
 	lirSize_ = nMaxEntries - hirSize_;
 	cacheSize = (int)nMaxEntries;
 }
@@ -29,7 +29,7 @@ LirsPolicy::setLimit(size_t nMaxEntries){
 void
 LirsPolicy::doAfterInsert(iterator i)
 {
-	NFD_LOG_INFO("After Insert Function" );
+	NFD_LOG_INFO("After Insert Function "<<i->getName());
 
 	if ((lirSize_ --) > 0) {
 		NFD_LOG_INFO("LIR is not full, insert to LIR, and lirsize is "<< lirSize_<<" after the insertion");
@@ -47,13 +47,13 @@ LirsPolicy::doAfterInsert(iterator i)
         listQ_.debugToString("LRU list Q");
 	}
 	else{		
-		for(auto it = stackS_.container_.begin(); it != stackS_.container_.end(); ) {
-			if(stackS_.getSize() <= 2 * cacheSize) break;
-			if(it->first->getState()== EntryInfo::knonResidentHIR){
-				it = stackS_.container_.erase(it);
-			}
-			else it ++;
-		}
+		// for(auto it = stackS_.container_.begin(); it != stackS_.container_.end(); ) {
+		// 	if(stackS_.getSize() <= 2 * cacheSize) break;
+		// 	if(it->first->getState()== EntryInfo::knonResidentHIR){
+		// 		it = stackS_.container_.erase(it);
+		// 	}
+		// 	else it ++;
+		// }
 
 		NFD_LOG_INFO("ResidentHIR and LIR are full, remove a ResidentHIR" );
 		EntryPair tmp = listQ_.getAndRemoveFrontEntry();
@@ -69,8 +69,26 @@ LirsPolicy::doAfterInsert(iterator i)
 			addAResidentHIREntry(i);
 		} 
 
+
+		// LRUStackSLocation location = stackS_.find(i->getName());
+		// if (location >= 0) {
+		// 	NFD_LOG_INFO("This entry is a nonResidentHIR, it's in stack S" );
+		// 	listQ_.debugToString("LRU list Q");
+		// 	EntryPair tmp = listQ_.getAndRemoveFrontEntry();
+		//     stackS_.findAndSetState(tmp.first->getName(), EntryInfo::knonResidentHIR);
+		// 	hitHIRInStackS(location, i);
+		// 	this->emitSignal(beforeEvict, tmp.second);
+		// }
+		// else {
+		// 	NFD_LOG_INFO("This new entry is not in both cache and stack S, save it to stack S" );
+		// 	auto info = std::make_shared<EntryInfo>(i->getName(), EntryInfo::knonResidentHIR);
+		// 	stackS_.pushEntry({info, i});
+		// 	this->emitSignal(beforeEvict, i);
+		// }
+
 		stackS_.debugToString("LRU stack S");
         listQ_.debugToString("LRU list Q");
+
 
 		this->emitSignal(beforeEvict, tmp.second);
 	}
@@ -197,7 +215,7 @@ LirsPolicy::addAResidentHIREntry(iterator i)
 
 void 
 LRUStack::debugToString(std::string const& name)
-  {
+{
     NFD_LOG_INFO(" " );
 	NFD_LOG_INFO("#############" << name << "#############" );
     std::for_each( container_.begin(), container_.end(), [](EntryPair& item)
@@ -206,7 +224,7 @@ LRUStack::debugToString(std::string const& name)
         item.first->returnStateStr(item.first->getState()) << ">");
         } );
 	NFD_LOG_INFO(" " );
-  }
+}
 
 } // namespace lru
 } // namespace cs

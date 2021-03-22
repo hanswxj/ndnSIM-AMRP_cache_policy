@@ -90,8 +90,8 @@ class LRUStack
 public:
   void movToTop(LRUStackLocation location, iterator i)
   {
-    if(location == container_.size() - 1)
-      return;
+    // if(location == container_.size() - 1)
+    //   return;
     auto it = container_.begin() + location;
     EntryPair tmp = container_[location];
     container_.erase(it);

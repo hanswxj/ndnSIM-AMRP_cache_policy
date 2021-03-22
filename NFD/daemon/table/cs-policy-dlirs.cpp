@@ -197,8 +197,8 @@ DlirsPolicy::doBeforeUse(iterator i)
 			stackS_.pushEntry(listQ_.getEntryByLocation(location));
 			listQ_.movToEnd(location, i);
 
-			removeHIR(curhir - hirSize_);
-			// changeHIRtoLIR(lirSize_ - curlir);
+			// removeHIR(curhir - hirSize_);
+			changeHIRtoLIR(lirSize_ - curlir);
 
 			stackS_.debugToString("LRU stack S");
             listQ_.debugToString("LRU list Q");

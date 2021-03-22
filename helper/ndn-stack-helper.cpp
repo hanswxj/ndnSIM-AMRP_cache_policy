@@ -41,6 +41,8 @@
 #include "ns3/ndnSIM/NFD/daemon/table/cs-policy-lrfu.hpp"
 #include "ns3/ndnSIM/NFD/daemon/table/cs-policy-lirs.hpp"
 #include "ns3/ndnSIM/NFD/daemon/table/cs-policy-dlirs.hpp"
+// #include "ns3/ndnSIM/NFD/daemon/table/cs-policy-ccpcc.hpp"
+#include "ns3/ndnSIM/NFD/daemon/table/cs-policy-ccp.hpp"
 
 NS_LOG_COMPONENT_DEFINE("ndn.StackHelper");
 
@@ -61,7 +63,9 @@ StackHelper::StackHelper()
   m_csPolicies.insert({"nfd::cs::priority_fifo", [] () { return make_unique<nfd::cs::PriorityFifoPolicy>(); }});
   m_csPolicies.insert({"nfd::cs::lrfu", [] () { return make_unique<nfd::cs::PriorityLrfuPolicy>(); }});
   m_csPolicies.insert({"nfd::cs::lirs", [] () { return make_unique<nfd::cs::LirsPolicy>(); }});        //wxj add
-  m_csPolicies.insert({"nfd::cs::dlirs", [] () { return make_unique<nfd::cs::DlirsPolicy>(); }}); 
+  m_csPolicies.insert({"nfd::cs::dlirs", [] () { return make_unique<nfd::cs::DlirsPolicy>(); }});
+  // m_csPolicies.insert({"nfd::cs::ccpcc", [] () { return make_unique<nfd::cs::CcpccPolicy>(); }}); 
+  m_csPolicies.insert({"nfd::cs::ccp", [] () { return make_unique<nfd::cs::CcpPolicy>(); }});   
 
   m_csPolicyCreationFunc = m_csPolicies["nfd::cs::lru"];
 

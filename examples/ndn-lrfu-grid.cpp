@@ -54,9 +54,9 @@ int
 main(int argc, char* argv[])
 {
   // Setting default parameters for PointToPoint links and channels
-  Config::SetDefault("ns3::PointToPointNetDevice::DataRate", StringValue("1Mbps"));
+  Config::SetDefault("ns3::PointToPointNetDevice::DataRate", StringValue("100Mbps"));
   Config::SetDefault("ns3::PointToPointChannel::Delay", StringValue("10ms"));
-  Config::SetDefault("ns3::QueueBase::MaxPackets", UintegerValue(10));
+  Config::SetDefault("ns3::QueueBase::MaxPackets", UintegerValue(1000));
 
   // Read optional command-line parameters (e.g., enable visualizer with ./waf --run=<> --visualize
   CommandLine cmd;
@@ -159,15 +159,16 @@ main(int argc, char* argv[])
 
   // Install NDN stack on producer and consumer
   ndn::StackHelper ndnHelper;
-  ndnHelper.setCsSize(40);
-  ndnHelper.setPolicy("nfd::cs::dlirs");   
+  ndnHelper.setCsSize(50);
+  ndnHelper.setPolicy("nfd::cs::ccp");   
   ndnHelper.Install(producerNodes);
   ndnHelper.Install(consumerNodes);
 
   // Install NDN stack on router
   ndn::StackHelper ndnRouterHelper;
-  ndnRouterHelper.setCsSize(40);
-  ndnRouterHelper.setPolicy("nfd::cs::dlirs");
+  ndnRouterHelper.setCsSize(50);
+  // ndnRouterHelper.setPolicy("nfd::cs::lru");
+  ndnRouterHelper.setPolicy("nfd::cs::ccp");
   ndnRouterHelper.Install(routerNodes);
 
   // Installing global routing interface on all nodes
@@ -179,7 +180,8 @@ main(int argc, char* argv[])
   std::string prefix = "/prefix";
 
   // Set BestRoute strategy
-  ndn::StrategyChoiceHelper::InstallAll(prefix, "/localhost/nfd/strategy/best-route");
+  // ndn::StrategyChoiceHelper::InstallAll(prefix, "/localhost/nfd/strategy/best-route");
+  ndn::StrategyChoiceHelper::InstallAll("/prefix", "/localhost/nfd/strategy/multicast");
 
   // Installing applications
 
@@ -187,9 +189,9 @@ main(int argc, char* argv[])
   ndn::AppHelper consumerHelper("ns3::ndn::ConsumerZipfMandelbrot");
   consumerHelper.SetPrefix(prefix);
   consumerHelper.SetAttribute("Frequency", StringValue("100"));        // 100 interests a second
-  consumerHelper.SetAttribute("NumberOfContents", StringValue("500")); // 1000 different contents
-  consumerHelper.SetAttribute("q",StringValue("0.8"));
-  consumerHelper.SetAttribute("s",StringValue("0.8"));
+  consumerHelper.SetAttribute("NumberOfContents", StringValue("1000")); // 1000 different contents
+  consumerHelper.SetAttribute("q",StringValue("0.7"));
+  consumerHelper.SetAttribute("s",StringValue("0.7"));
 
   for (int i = 0; i <= 6; i++){
     consumerHelper.Install(consumerNodes.Get(i));
@@ -210,7 +212,7 @@ main(int argc, char* argv[])
   Simulator::Stop(Seconds(20.0));
 
   //ndn::CsTracer::InstallAll("cs-trace-lrfu.txt",Seconds(1));
-  ndn::AppDelayTracer::InstallAll("InterestRate-75-FIFO-app-delays-trace.txt");
+  ndn::AppDelayTracer::InstallAll("ndn-lrfu-grid-app-delays-trace.txt");
 
   Simulator::Run();
   Simulator::Destroy();
