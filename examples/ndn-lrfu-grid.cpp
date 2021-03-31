@@ -62,6 +62,19 @@ main(int argc, char* argv[])
   CommandLine cmd;
   cmd.Parse(argc, argv);
 
+  const int CACHE_SIZE = SimHelper::getEnvVariable("CACHE_SIZE", 50);
+  const std::string CACHE_POLICY = SimHelper::getEnvVariableStr("CACHE_POLICY", "nfd::cs::lirs");
+  const std::string FREQUENCY = SimHelper::getEnvVariableStr("FREQUENCY", "100");
+  const std::string NumberOfContents = SimHelper::getEnvVariableStr("NumberOfContents", "1000");
+  const std::string ZipfParam = SimHelper::getEnvVariableStr("ZipfParam", "0.7");
+
+  std::cout << " cache size = " << CACHE_SIZE
+            << " cache policy = " << CACHE_POLICY
+            << " frequency = " << FREQUENCY
+            << " Number Of Contents = " << NumberOfContents
+            << " Zipf Parameter = " << ZipfParam
+            << std::endl;
+
   // Creating 3x3 topology
   PointToPointHelper p2pGrid;
   PointToPointGridHelper grid(3, 3, p2pGrid);
@@ -159,16 +172,17 @@ main(int argc, char* argv[])
 
   // Install NDN stack on producer and consumer
   ndn::StackHelper ndnHelper;
-  ndnHelper.setCsSize(50);
-  ndnHelper.setPolicy("nfd::cs::ccp");   
+  ndnHelper.setCsSize(CACHE_SIZE);
+  // ndnHelper.setPolicy("nfd::cs::priority_fifo"); 
+  ndnHelper.setPolicy(CACHE_POLICY);
   ndnHelper.Install(producerNodes);
   ndnHelper.Install(consumerNodes);
 
   // Install NDN stack on router
   ndn::StackHelper ndnRouterHelper;
-  ndnRouterHelper.setCsSize(50);
-  // ndnRouterHelper.setPolicy("nfd::cs::lru");
-  ndnRouterHelper.setPolicy("nfd::cs::ccp");
+  ndnRouterHelper.setCsSize(CACHE_SIZE);
+  // ndnRouterHelper.setPolicy("nfd::cs::priority_fifo");
+  ndnRouterHelper.setPolicy(CACHE_POLICY);
   ndnRouterHelper.Install(routerNodes);
 
   // Installing global routing interface on all nodes
@@ -180,18 +194,18 @@ main(int argc, char* argv[])
   std::string prefix = "/prefix";
 
   // Set BestRoute strategy
-  // ndn::StrategyChoiceHelper::InstallAll(prefix, "/localhost/nfd/strategy/best-route");
-  ndn::StrategyChoiceHelper::InstallAll("/prefix", "/localhost/nfd/strategy/multicast");
+  ndn::StrategyChoiceHelper::InstallAll(prefix, "/localhost/nfd/strategy/best-route");
+  // ndn::StrategyChoiceHelper::InstallAll("/prefix", "/localhost/nfd/strategy/multicast");
 
   // Installing applications
 
   // Consumer
   ndn::AppHelper consumerHelper("ns3::ndn::ConsumerZipfMandelbrot");
   consumerHelper.SetPrefix(prefix);
-  consumerHelper.SetAttribute("Frequency", StringValue("100"));        // 100 interests a second
-  consumerHelper.SetAttribute("NumberOfContents", StringValue("1000")); // 1000 different contents
-  consumerHelper.SetAttribute("q",StringValue("0.7"));
-  consumerHelper.SetAttribute("s",StringValue("0.7"));
+  consumerHelper.SetAttribute("Frequency", StringValue(FREQUENCY));        // 100 interests a second
+  consumerHelper.SetAttribute("NumberOfContents", StringValue(NumberOfContents)); // 1000 different contents
+  consumerHelper.SetAttribute("q",StringValue(ZipfParam));
+  consumerHelper.SetAttribute("s",StringValue(ZipfParam));
 
   for (int i = 0; i <= 6; i++){
     consumerHelper.Install(consumerNodes.Get(i));
@@ -209,10 +223,18 @@ main(int argc, char* argv[])
   // Calculate and install FIBs
   ndn::GlobalRoutingHelper::CalculateRoutes();
 
-  Simulator::Stop(Seconds(20.0));
+  std::string folder = "result/";
+  std::string ratesFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_rates.txt";
+  std::string dropFile = folder  + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_drop.txt";
+  std::string delayFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_delay.txt";
+  // std::string csFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_cs.txt";
 
-  //ndn::CsTracer::InstallAll("cs-trace-lrfu.txt",Seconds(1));
-  ndn::AppDelayTracer::InstallAll("ndn-lrfu-grid-app-delays-trace.txt");
+  L2RateTracer::InstallAll(dropFile, Seconds(0.05));
+  ndn::L3RateTracer::InstallAll(ratesFile, Seconds(0.05));
+  ndn::AppDelayTracer::InstallAll(delayFile);
+  // ndn::CsTracer::InstallAll(csFile, Seconds(0.05));
+
+  Simulator::Stop(Seconds(20.0));
 
   Simulator::Run();
   Simulator::Destroy();

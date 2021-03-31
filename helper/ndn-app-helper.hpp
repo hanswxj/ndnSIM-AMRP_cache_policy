@@ -28,6 +28,8 @@
 #include "ns3/application-container.h"
 #include "ns3/ptr.h"
 
+#include "sim-helper.hpp"
+
 namespace ns3 {
 namespace ndn {
 

@@ -265,8 +265,8 @@ void DlirsPolicy::adjustSize(bool hitHIR)
 	if (hirSize_ < 1) {
 		hirSize_ = 1;
 	}
-	if (hirSize_ > (int)(cacheSize * 0.25)) {   //(int)(cacheSize * 0.25), cacheSize - 1
-		hirSize_ = (int)(cacheSize * 0.25);
+	if (hirSize_ > (int)(cacheSize * 0.23)) {   //(int)(cacheSize * 0.25), cacheSize - 1
+		hirSize_ = (int)(cacheSize * 0.23);
 	}
 	lirSize_ = cacheSize - hirSize_;
 	NFD_LOG_INFO("After adjustSize, HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
