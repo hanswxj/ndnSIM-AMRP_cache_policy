@@ -30,7 +30,7 @@ namespace ns3 {
  *
  * To run scenario and see what is happening, use the following command:
  *
- *     NS_LOG=ndn.ConsumerZipfMandelbrot:nfd.ContentStore:nfd.LrfuPolicy ./waf --run=4x4-ndn-lrfu-grid 2>log4x4.txt
+ *     NS_LOG=ndn.ConsumerZipfMandelbrot:nfd.ContentStore:nfd.LirsPolicy ./waf --run=4x4-ndn-lirs-grid 2>log4x4.txt
  */
 
 int
@@ -297,8 +297,9 @@ main(int argc, char* argv[])
 
   // Install NDN stack on producer and consumer
   ndn::StackHelper ndnHelper;
-  ndnHelper.setCsSize(1);
-  ndnHelper.setPolicy("nfd::cs::lrfu"); 
+  ndnHelper.SetOldContentStore("ns3::ndn::cs::Nocache");
+  // ndnHelper.setCsSize(1);
+  // ndnHelper.setPolicy("nfd::cs::lrfu"); 
   ndnHelper.Install(producerNodes);
   ndnHelper.Install(consumerNodes);
 

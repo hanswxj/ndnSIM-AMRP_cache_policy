@@ -47,7 +47,7 @@ namespace ns3 {
  *
  * To run scenario and see what is happening, use the following command:
  *
- *     NS_LOG=ndn.ConsumerZipfMandelbrot:nfd.ContentStore:nfd.LrfuPolicy ./waf --run=3x3-ndn-lrfu-grid --vis
+ *     NS_LOG=ndn.ConsumerZipfMandelbrot:nfd.ContentStore:nfd.LirsPolicy ./waf --run=3x3-ndn-lirs-grid --vis
  */
 
 int
@@ -69,10 +69,10 @@ main(int argc, char* argv[])
   const std::string ZipfParam = SimHelper::getEnvVariableStr("ZipfParam", "0.7");
 
   std::cout << " cache size = " << CACHE_SIZE
-            << " cache policy = " << CACHE_POLICY
-            << " frequency = " << FREQUENCY
-            << " Number Of Contents = " << NumberOfContents
-            << " Zipf Parameter = " << ZipfParam
+            << ", cache policy = " << CACHE_POLICY
+            << ", frequency = " << FREQUENCY
+            << ", Number Of Contents = " << NumberOfContents
+            << ", Zipf Parameter = " << ZipfParam
             << std::endl;
 
   // Creating 3x3 topology
@@ -172,9 +172,9 @@ main(int argc, char* argv[])
 
   // Install NDN stack on producer and consumer
   ndn::StackHelper ndnHelper;
-  ndnHelper.setCsSize(CACHE_SIZE);
-  // ndnHelper.setPolicy("nfd::cs::priority_fifo"); 
-  ndnHelper.setPolicy(CACHE_POLICY);
+  ndnHelper.SetOldContentStore("ns3::ndn::cs::Nocache");
+  // ndnHelper.setCsSize(1);
+  // ndnHelper.setPolicy("nfd::cs::lru");
   ndnHelper.Install(producerNodes);
   ndnHelper.Install(consumerNodes);
 
@@ -224,17 +224,17 @@ main(int argc, char* argv[])
   ndn::GlobalRoutingHelper::CalculateRoutes();
 
   std::string folder = "result/";
-  std::string ratesFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_rates.txt";
-  std::string dropFile = folder  + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_drop.txt";
   std::string delayFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_delay.txt";
   // std::string csFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_cs.txt";
+  // std::string ratesFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_rates.txt";
+  // std::string dropFile = folder  + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_drop.txt";
 
-  L2RateTracer::InstallAll(dropFile, Seconds(0.05));
-  ndn::L3RateTracer::InstallAll(ratesFile, Seconds(0.05));
   ndn::AppDelayTracer::InstallAll(delayFile);
   // ndn::CsTracer::InstallAll(csFile, Seconds(0.05));
+  // L2RateTracer::InstallAll(dropFile, Seconds(0.05));
+  // ndn::L3RateTracer::InstallAll(ratesFile, Seconds(0.05));
 
-  Simulator::Stop(Seconds(20.0));
+  Simulator::Stop(Seconds(25.0));
 
   Simulator::Run();
   Simulator::Destroy();

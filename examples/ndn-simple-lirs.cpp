@@ -49,11 +49,19 @@ main(int argc, char* argv[])
   //p2p.Install(nodes.Get(1), nodes.Get(2));
 
   // Install NDN stack on all nodes
-  ndn::StackHelper ndnHelper;
+  ndn::StackHelper ndnHelper,ndnHelper1;
+
+  ndnHelper.SetOldContentStore("ns3::ndn::cs::Nocache");
+  
   ndnHelper.SetDefaultRoutes(true);
-  ndnHelper.setCsSize(10);
-  ndnHelper.setPolicy("nfd::cs::lirs");
-  ndnHelper.InstallAll();
+  // ndnHelper.setCsSize(0);
+  // ndnHelper.setPolicy("nfd::cs::lru");
+  ndnHelper.Install(nodes.Get(0));
+
+  ndnHelper1.SetDefaultRoutes(true);
+  ndnHelper1.setCsSize(100);
+  ndnHelper1.setPolicy("nfd::cs::lru");
+  ndnHelper1.Install(nodes.Get(1));
 
   // Choosing forwarding strategy
   ndn::StrategyChoiceHelper::InstallAll("/prefix", "/localhost/nfd/strategy/multicast");
@@ -64,8 +72,8 @@ main(int argc, char* argv[])
   // Consumer
   ndn::AppHelper consumerHelper("ns3::ndn::ConsumerZipfMandelbrot");
   consumerHelper.SetPrefix("/prefix");
-  consumerHelper.SetAttribute("Frequency", StringValue("10"));        // 10 interests a second
-  consumerHelper.SetAttribute("NumberOfContents", StringValue("15")); // 100 different contents
+  consumerHelper.SetAttribute("Frequency", StringValue("100"));        // 10 interests a second
+  consumerHelper.SetAttribute("NumberOfContents", StringValue("1000")); // 100 different contents
   consumerHelper.SetAttribute("q",StringValue("0.7"));
   consumerHelper.SetAttribute("s",StringValue("0.7"));
 

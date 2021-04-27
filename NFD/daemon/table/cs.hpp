@@ -212,6 +212,18 @@ private:
 
   bool m_shouldAdmit; ///< if false, no Data will be admitted
   bool m_shouldServe; ///< if false, all lookups will miss
+  
+  // mutable bool flag = false;
+  // mutable double hitRateRatio = 0;
+  // mutable double missRateRatio = 0;
+
+  // mutable double hitRateRatio1 = 0;
+  // mutable double hitRateRatio2 = 0;
+  // mutable double hitRateRatio3 = 0;
+
+  // mutable double missRateRatio1 = 0;
+  // mutable double missRateRatio2 = 0;
+  // mutable double missRateRatio3 = 0;
 };
 
 } // namespace cs

@@ -37,16 +37,17 @@ NDN_CXX_ASSERT_FORWARD_ITERATOR(Cs::const_iterator);
 
 NFD_LOG_INIT("ContentStore");
 
-int hitRateRatio = 0;
-int missRateRatio = 0;
+bool flag = false;
+double hitRateRatio = 0;
+double missRateRatio = 0;
 
-int hitRateRatio1 = 0;
-int hitRateRatio2 = 0;
-int hitRateRatio3 = 0;
+double hitRateRatio1 = 0;
+double hitRateRatio2 = 0;
+double hitRateRatio3 = 0;
 
-int missRateRatio1 = 0;
-int missRateRatio2 = 0;
-int missRateRatio3 = 0;
+double missRateRatio1 = 0;
+double missRateRatio2 = 0;
+double missRateRatio3 = 0;
 
 unique_ptr<Policy>
 makeDefaultPolicy()
@@ -154,61 +155,84 @@ Cs::find(const Interest& interest,
     match = this->findLeftmost(interest, first, last);
   }
 
+  std::string prefdata = prefix.toUri().c_str();
+  std::string delimiter = "%";
+  std::string pref = prefdata.substr(0, prefdata.find(delimiter));
+
   if (match == last) {
-    if (m_policy->getName() == "lirs" || m_policy->getName() == "lrfu" || m_policy->getName() == "lru" || m_policy->getName() == "priority_fifo" || m_policy->getName() == "dlirs"  || m_policy->getName() == "ccp" || m_policy->getName() == "ccpcc"){
-        std::string prefdata = prefix.toUri().c_str();
 
-        std::string delimiter = "%";
-        std::string pref = prefdata.substr(0, prefdata.find(delimiter));
+    missRateRatio ++;
+    if(pref == "/prefix/") {
+      missRateRatio1++;
+    }
+    else if(pref == "/prefix2/") {
+      missRateRatio2++;
+    }
+    else if(pref == "/prefix3/") {
+      missRateRatio3++;
+    }             
 
-        if(pref == "/prefix/"){
-          missRateRatio1++;
-        }
-        else if(pref == "/prefix2/"){
-          missRateRatio2++;
-        }
-        else if(pref == "/prefix3/"){
-          missRateRatio3++;
-        }
-      missRateRatio ++;        
-      }   
+    // NFD_LOG_DEBUG(" TotalMiss : " << missRateRatio << " hit : "<< hitRateRatio);
+    // if((missRateRatio2 != 0)||(missRateRatio3 != 0)) {
+    //   NFD_LOG_DEBUG("  Miss P1: " << missRateRatio1<< " Miss P2: " << missRateRatio2<< " Miss P3: " <<missRateRatio3);
+    // }        
 
-    NFD_LOG_DEBUG(" TotalMiss + Routing Lookup : " << missRateRatio);
-    NFD_LOG_DEBUG("  Miss P1: " << missRateRatio1<< " Miss P2: " << missRateRatio2<< " Miss P3: " <<missRateRatio3); 
+    if(!flag) {
+      if(hitRateRatio + missRateRatio >= 30 * m_policy->getLimit()) {
+        hitRateRatio = 0;
+        missRateRatio = 0;
 
+        hitRateRatio1 = 0;
+        hitRateRatio2 = 0;
+        hitRateRatio3 = 0;
 
-    // missRateRatio ++;
-    // NFD_LOG_DEBUG("  cache miss" << " missRateRatio: " << missRateRatio);
-    //NFD_LOG_DEBUG("  no-match");
+        missRateRatio1 = 0;
+        missRateRatio2 = 0;
+        missRateRatio3 = 0;
+        flag = true;
+        NFD_LOG_DEBUG("Training data completed, all CS reach the limit!");
+      }
+    }
+    if(flag) {
+      NFD_LOG_DEBUG(" TotalMiss : " << missRateRatio << " hit : "<< hitRateRatio);
+      if((missRateRatio2 != 0)||(missRateRatio3 != 0)) {
+        NFD_LOG_DEBUG("  Miss P1: " << missRateRatio1<< " Miss P2: " << missRateRatio2<< " Miss P3: " <<missRateRatio3);
+      }
+    }
+
+    // NFD_LOG_DEBUG("  no-match");
     missCallback(interest);
     return;
   }
   
   hitRateRatio ++;
-  if (m_policy->getName() == "lirs" || m_policy->getName() == "lrfu" || m_policy->getName() == "lru" || m_policy->getName() == "priority_fifo" || m_policy->getName() == "dlirs" || m_policy->getName() == "ccp" || m_policy->getName() == "ccpcc"){
-      std::string prefdata = prefix.toUri().c_str();
+  if(pref == "/prefix/") {
+    missRateRatio1++;
+  }
+  else if(pref == "/prefix2/") {
+    missRateRatio2++;
+  }
+  else if(pref == "/prefix3/") {
+    missRateRatio3++;
+  }
 
-      std::string delimiter = "%";
-      std::string pref = prefdata.substr(0, prefdata.find(delimiter));
+  // NFD_LOG_DEBUG(" TotalHit : " << hitRateRatio << ", hit rate : " << hitRateRatio / (hitRateRatio + missRateRatio));
+  // if((hitRateRatio2 != 0)||(hitRateRatio3 != 0)){
+  //   NFD_LOG_DEBUG("  Hit P1: " << hitRateRatio1<< ", hit rate P1 : " << hitRateRatio1 / (hitRateRatio1 + missRateRatio1));
+  //   NFD_LOG_DEBUG("  Hit P2: " << hitRateRatio2<< ", hit rate P2 : " << hitRateRatio2 / (hitRateRatio2 + missRateRatio2));
+  //   NFD_LOG_DEBUG("  Hit P3: " << hitRateRatio3<< ", hit rate P3 : " << hitRateRatio2 / (hitRateRatio3 + missRateRatio3));
+  // }
 
-      if(pref == "/prefix/"){
-        hitRateRatio1++;
-      }
-      else if(pref == "/prefix2/"){
-        hitRateRatio2++;
-      }
-      else if(pref == "/prefix3/"){
-        hitRateRatio3++;
-      }
-    }   
-
-  NFD_LOG_DEBUG(" TotalHit : " << hitRateRatio);
-  NFD_LOG_DEBUG("  Hit P1: " << hitRateRatio1<< " Hit P2: " << hitRateRatio2<< " Hit P3: " <<hitRateRatio3); 
-
-
-  // hitRateRatio ++;
-  // NFD_LOG_DEBUG("  cache hit " << match->getName()<< " hitRateRatio: " << hitRateRatio);
-  //NFD_LOG_DEBUG("  matching " << match->getName());
+  if(flag) {
+    NFD_LOG_DEBUG(" TotalHit : " << hitRateRatio << ", hit rate : " << hitRateRatio / (hitRateRatio + missRateRatio));
+    if((hitRateRatio2 != 0)||(hitRateRatio3 != 0)){
+      NFD_LOG_DEBUG("  Hit P1: " << hitRateRatio1<< ", hit rate P1 : " << hitRateRatio1 / (hitRateRatio1 + missRateRatio1));
+      NFD_LOG_DEBUG("  Hit P2: " << hitRateRatio2<< ", hit rate P2 : " << hitRateRatio2 / (hitRateRatio2 + missRateRatio2));
+      NFD_LOG_DEBUG("  Hit P3: " << hitRateRatio3<< ", hit rate P3 : " << hitRateRatio2 / (hitRateRatio3 + missRateRatio3));
+    }
+  }
+    
+  // NFD_LOG_DEBUG("  matching " << match->getName());
   m_policy->beforeUse(match);
   hitCallback(interest, match->getData());
 }
