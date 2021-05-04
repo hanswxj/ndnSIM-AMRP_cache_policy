@@ -224,17 +224,17 @@ main(int argc, char* argv[])
   ndn::GlobalRoutingHelper::CalculateRoutes();
 
   std::string folder = "result/";
-  std::string delayFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_delay.txt";
-  // std::string csFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_cs.txt";
-  // std::string ratesFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_rates.txt";
-  // std::string dropFile = folder  + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_drop.txt";
+  std::string delayFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_f:" + FREQUENCY + "_delay.txt";
+  // std::string csFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_f:" + FREQUENCY +  "_cs.txt";
+  // std::string ratesFile = folder + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_f:" + FREQUENCY +  "_rates.txt";
+  // std::string dropFile = folder  + CACHE_POLICY + "_size:" + std::to_string(CACHE_SIZE) + "_α:" + ZipfParam + "_f:" + FREQUENCY +  "_drop.txt";
 
   ndn::AppDelayTracer::InstallAll(delayFile);
   // ndn::CsTracer::InstallAll(csFile, Seconds(0.05));
   // L2RateTracer::InstallAll(dropFile, Seconds(0.05));
   // ndn::L3RateTracer::InstallAll(ratesFile, Seconds(0.05));
 
-  Simulator::Stop(Seconds(25.0));
+  Simulator::Stop(Seconds(30.0));
 
   Simulator::Run();
   Simulator::Destroy();

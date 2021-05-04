@@ -54,7 +54,7 @@ DlirsPolicy::doAfterInsert(iterator i)
         listQ_.debugToString("LRU list Q");
 	}
 	else{
-		removeNHIR(curhir + curlir + curnhir - 2*cacheSize);
+		removeNHIR(curhir + curlir + curnhir - 2 * cacheSize);
 		NFD_LOG_INFO("ResidentHIR and LIR are full, remove a ResidentHIR" );		
 				
 		bool is_Demoted = listQ_.get_isDemotedByLocation(BottomLocation);
@@ -129,6 +129,7 @@ DlirsPolicy::doAfterRefresh(iterator i)
 			if(flag){
 				adjustSize(false);
 				listQ_.set_isDemotedByLocation(location, false);
+				hir_lir --;
 			}
 			stackS_.pushEntry(listQ_.getEntryByLocation(location));
 			listQ_.movToEnd(location, i);
@@ -150,7 +151,7 @@ DlirsPolicy::doAfterRefresh(iterator i)
 void
 DlirsPolicy::doBeforeErase(iterator i)
 {
-  
+	removeHIR(curhir - hirSize_);  
 }
 
 void
@@ -193,6 +194,7 @@ DlirsPolicy::doBeforeUse(iterator i)
 			if(flag){
 				adjustSize(false);
 				listQ_.set_isDemotedByLocation(location, false);
+				hir_lir --;
 			}
 			stackS_.pushEntry(listQ_.getEntryByLocation(location));
 			listQ_.movToEnd(location, i);
@@ -249,24 +251,29 @@ void DlirsPolicy::adjustSize(bool hitHIR)
 	NFD_LOG_INFO("HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
 	int delta = 0;
 	if (hitHIR) {
-		if (curnhir > hir_lir) {
+		if (curnhir > hir_lir) {   //Hn > Hd
+			// delta = 1;
+			delta = 0;
+		} else {
+			// delta = (int)((double)hir_lir / (double)curnhir + 0.5);
 			delta = 1;
-		} else {
-			delta = (int)((double)hir_lir / (double)curnhir + 0.5);;
 		}
-	} else {
-		if (hir_lir > curnhir) {
-			delta = -1;
+	}
+	else {
+		if (hir_lir > curnhir) {  //Hd > Hn
+			// delta = -1;
+			delta = 0;
 		} else {
-			delta = -(int)((double)curnhir / (double)hir_lir + 0.5);
+			// delta = -(int)((double)curnhir / (double)hir_lir + 0.5);
+			delta = -1;
 		}
 	}
 	hirSize_ += delta;
 	if (hirSize_ < 1) {
 		hirSize_ = 1;
 	}
-	if (hirSize_ > (int)(cacheSize * 0.23)) {   //(int)(cacheSize * 0.25), cacheSize - 1
-		hirSize_ = (int)(cacheSize * 0.23);
+	if (hirSize_ > cacheSize - 1) {   //(int)(cacheSize * 0.24), cacheSize - 1
+		hirSize_ = cacheSize - 1;
 	}
 	lirSize_ = cacheSize - hirSize_;
 	NFD_LOG_INFO("After adjustSize, HIR size is "<<hirSize_<<", LIR size is "<<lirSize_<<", total size is "<<cacheSize);
@@ -347,7 +354,7 @@ DlirsPolicy::removeNHIR(int k)
 	int a = stackS_.erase_K_nHIR(k);
 	curnhir -= a;
 	NFD_LOG_INFO("After remove NHIR, cur HIR size is "<<curhir<<", cur LIR size is "<<curlir<<", cur nonHIR size is "<<curnhir);
-	BOOST_ASSERT(curhir + curlir + curnhir == 2*cacheSize);
+	BOOST_ASSERT(curhir + curlir + curnhir == 2 * cacheSize);
 }
 
 void 

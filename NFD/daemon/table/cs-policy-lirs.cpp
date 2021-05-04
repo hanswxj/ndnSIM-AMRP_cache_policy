@@ -21,7 +21,7 @@ LirsPolicy::LirsPolicy()
 void
 LirsPolicy::setLimit(size_t nMaxEntries){
 	Policy::setLimit(nMaxEntries);
-	hirSize_ = 1+ (int)(nMaxEntries / 10);
+	hirSize_ = 1 + (int)(nMaxEntries / 100);
 	lirSize_ = nMaxEntries - hirSize_;
 	cacheSize = (int)nMaxEntries;
 }
